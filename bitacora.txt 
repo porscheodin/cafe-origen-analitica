@@ -1,0 +1,23 @@
+======================================================================
+--------------DICCIONARIO DE DATOS---------
+======================================================================
+    
+    - "id": string -> Identificador unico de la venta, se genera aleatoriamente.
+    - "fecha": string -> Fecha de la venta, esta en formato ISO y puede tener hasta 3 decimales en los segundos.
+    - "producto": string -> Nombre del producto que se vendio, puede ser:
+    - "cantidad": number -> Cantidad de productos vendidos, puede ser un numero entero o decimal.
+    - "precio": number -> Precio unitario del producto, puede ser un numero entero o decimal.
+
+======================================================================
+--------------CASOS BORDER DETECTADOS---------
+======================================================================
+    
+   - Ciudades (Inconsistencia de mayúsculas y minúsculas): Problema detectado: En el registro id: 1 aparece "Medellín" (con mayúscula inicial) y en el registro id: 5 aparece "medellín" (todo en minúscula). Al procesar o agrupar en JavaScript, "Medellín" === "medellín" da false, tratándolas erróneamente como dos ciudades distintas.
+   Decisión: Estandarizar/normalizar el texto de la ciudad aplicando .toLowerCase() (o .trim()) antes de cualquier filtro, agrupación o reporte.
+    
+   - Cantidades (Venta con cantidad en cero):Problema detectado: En el registro id: 8 la cantidad es 0 (cantidad: 0). Una transacción con cero unidades vendidas no representa una venta real y distorsiona métricas como el ticket promedio o el total de unidades comercializadas.
+    Decisión: Tratarlo como una transacción fallida o cancelada; excluirla de los cálculos analíticos filtrando únicamente aquellas donde cantidad > 0.
+
+   - Clientes (Clientes recurrentes y compras duplicadas): Problema detectado: Existen clientes con múltiples registros (por ejemplo, C01 tiene 3 compras, C02 tiene 2 y C03 tiene 2). Si se calcula el número de clientes contando simplemente los registros de ventas, se sobreestimará la base de clientes (hay 12 ventas pero solo 8 clientes reales). Además, C01 compró el mismo producto dos días seguidos.
+    Decisión: Para métricas de "total de clientes", utilizar una estructura de valores únicos (new Set(ventas.map(v => v.cliente))). Para el análisis de ingresos, agrupar por cliente para calcular su recurrencia y valor acumulado.
+
