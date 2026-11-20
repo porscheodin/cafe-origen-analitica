@@ -20,4 +20,133 @@
 
    - Clientes (Clientes recurrentes y compras duplicadas): Problema detectado: Existen clientes con múltiples registros (por ejemplo, C01 tiene 3 compras, C02 tiene 2 y C03 tiene 2). Si se calcula el número de clientes contando simplemente los registros de ventas, se sobreestimará la base de clientes (hay 12 ventas pero solo 8 clientes reales). Además, C01 compró el mismo producto dos días seguidos.
     Decisión: Para métricas de "total de clientes", utilizar una estructura de valores únicos (new Set(ventas.map(v => v.cliente))). Para el análisis de ingresos, agrupar por cliente para calcular su recurrencia y valor acumulado.
+======================================================================
+-------------- PLAN DE INDICADORES (PSEUDOCÓDIGO) ---------
+======================================================================
+
+1. Indicador: Total de ingresos (Total de ventas en $)
+   - recorrer: El arreglo `ventas`.
+   - aplicar: Que `cantidad > 0` (ignorar ventas canceladas/en 0).
+   - acumular: El valor monetario de cada venta usando `valorVenta(venta)`.
+   - valor inicial: `totalIngresos = 0`.
+   - Pseudocódigo:
+     INICIO
+       totalIngresos = 0
+       PARA CADA venta EN ventas HACER:
+         SI venta.cantidad > 0 ENTONCES:
+           totalIngresos = totalIngresos + valorVenta(venta)
+         FIN SI
+       FIN PARA
+       RETORNAR totalIngresos
+     FIN
+
+2. Indicador: Total de unidades de producto vendidas
+   - recorrer: El arreglo `ventas`.
+   - aplicar: Que `cantidad > 0`.
+   - acumular: La propiedad `venta.cantidad`.
+   - valor inicial: `totalProductos = 0`.
+   - Pseudocódigo:
+     INICIO
+       totalProductos = 0
+       PARA CADA venta EN ventas HACER:
+         SI venta.cantidad > 0 ENTONCES:
+           totalProductos = totalProductos + venta.cantidad
+         FIN SI
+       FIN PARA
+       RETORNAR totalProductos
+     FIN
+
+3. Indicador: Ventas totales por ciudad (ej. Medellín)
+   - recorrer: El arreglo `ventas`.
+   - aplicar: Que la ciudad normalizada en minúsculas sea igual a la buscada (`venta.ciudad.toLowerCase() === ciudadObjetivo`) y `cantidad > 0`.
+   - acumular: `valorVenta(venta)`.
+   - valor inicial: `totalCiudad = 0`.
+   - Pseudocódigo:
+     INICIO
+       totalCiudad = 0
+       PARA CADA venta EN ventas HACER:
+         SI venta.ciudad.toLowerCase() ES IGUAL A "medellín" Y venta.cantidad > 0 ENTONCES:
+           totalCiudad = totalCiudad + valorVenta(venta)
+         FIN SI
+       FIN PARA
+       RETORNAR totalCiudad
+     FIN     
+======================================================================
+COMPORTAMIENTO CON ARREGLO VACÍO ([])
+======================================================================
+1. totalVendido([]):
+   - Decisión: Devuelve 0.
+   - Justificación: Si no hay transacciones, el dinero total recaudado es 0.
+
+2. unidadesVendidas([]):
+   - Decisión: Devuelve 0.
+   - Justificación: No se vendió ninguna unidad física.
+
+3. ventasPorCiudad([], ciudad):
+   - Decisión: Devuelve 0.
+   - Justificación: Al no haber ventas, ninguna ciudad tiene ingresos.
+
+4. ventaMayor([]):
+   - Decisión: Devuelve null.
+   - Justificación: No existe un registro para retornar. Retornar null indica explícitamente "ausencia de datos" y evita que el código intente acceder a propiedades de un objeto inexistente.
+
+5. ticketPromedio([]):
+   - Decisión: Devuelve 0.
+   - Justificación: Evita el error matemático de dividir por cero (0 / 0 da NaN en JavaScript).
+
+======================================================================
+TABLAS DE TRAZA (VERIFICACIÓN MANUAL DE RESULTADOS)
+======================================================================
+
+1. Traza para unidadesVendidas(ventas)
+----------------------------------------------------------------------
+Objetivo: Contar las unidades vendidas ignorando registros con cantidad <= 0.
+Valor inicial: unidades = 0
+
+| Iteración | id | cantidad | Condición (cantidad > 0) | Operación      | Acumulador (unidades) |
+|-----------|----|----------|--------------------------|----------------|-----------------------|
+| Inicio    | -  | -        | -                        | -              | 0                     |
+| 1         | 1  | 2        | Sí                       | 0 + 2          | 2                     |
+| 2         | 2  | 1        | Sí                       | 2 + 1          | 3                     |
+| 3         | 3  | 1        | Sí                       | 3 + 1          | 4                     |
+| 4         | 4  | 1        | Sí                       | 4 + 1          | 5                     |
+| 5         | 5  | 3        | Sí                       | 5 + 3          | 8                     |
+| 6         | 6  | 2        | Sí                       | 8 + 2          | 10                    |
+| 7         | 7  | 1        | Sí                       | 10 + 1         | 11                    |
+| 8         | 8  | 0        | No (ignorado)            | se mantiene    | 11                    |
+| 9         | 9  | 2        | Sí                       | 11 + 2         | 13                    |
+| 10        | 10 | 4        | Sí                       | 13 + 4         | 17                    |
+| 11        | 11 | 1        | Sí                       | 17 + 1         | 18                    |
+| 12        | 12 | 3        | Sí                       | 18 + 3         | 21                    |
+
+- Resultado cálculo manual: 21 unidades.
+- Resultado programa: 21 unidades.
+- Conclusión: Coincide exactamente.
+
+
+2. Traza para ventasPorCiudad(ventas, "medellín")
+----------------------------------------------------------------------
+Objetivo: Acumular el valor monetario de las ventas en Medellín (ignorando mayúsculas/tildes y cantidad <= 0).
+Ciudad normalizada buscada: "medellin"
+Valor inicial: ventasCiudad = 0
+
+| Iteración | id | ciudad   | normalizada | ¿Coincide? | cantidad | precio | valorVenta (cant × precio) | Acumulador (ventasCiudad) |
+|-----------|----|----------|-------------|------------|----------|--------|----------------------------|---------------------------|
+| Inicio    | -  | -        | -           | -          | -        | -      | -                          | 0                         |
+| 1         | 1  | Medellín | medellin    | Sí         | 2        | 42000  | 84000                      | 0 + 84000 = 84000         |
+| 2         | 2  | Bogotá   | bogota      | No         | 1        | 26000  | -                          | 84000                     |
+| 3         | 3  | Cali     | cali        | No         | 1        | 95000  | -                          | 84000                     |
+| 4         | 4  | Medellín | medellin    | Sí         | 1        | 42000  | 42000                      | 84000 + 42000 = 126000    |
+| 5         | 5  | medellín | medellin    | Sí         | 3        | 45000  | 135000                     | 126000 + 135000 = 261000  |
+| 6         | 6  | Bogotá   | bogota      | No         | 2        | 26000  | -                          | 261000                    |
+| 7         | 7  | Bogotá   | bogota      | No         | 1        | 120000 | -                          | 261000                    |
+| 8         | 8  | Cali     | cali        | No         | 0        | 42000  | -                          | 261000                    |
+| 9         | 9  | Cali     | cali        | No         | 2        | 45000  | -                          | 261000                    |
+| 10        | 10 | Pereira  | pereira     | No         | 4        | 42000  | -                          | 261000                    |
+| 11        | 11 | Medellín | medellin    | Sí         | 1        | 95000  | 95000                      | 261000 + 95000 = 356000   |
+| 12        | 12 | Bogotá   | bogota      | No         | 3        | 26000  | -                          | 356000                    |
+
+- Resultado cálculo manual: $356,000.
+- Resultado programa: $356,000.
+- Conclusión: Coincide exactamente.
 
